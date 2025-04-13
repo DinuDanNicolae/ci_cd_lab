@@ -22,7 +22,7 @@ jobs:
 
       - name: Run tests
         run: go test ./...
-        
+
   compile:
     needs: test
     runs-on: ubuntu-latest
@@ -40,3 +40,40 @@ jobs:
 
       - name: Compile binary
         run: go build -o myapp
+
+  build:
+    runs-on: ubuntu-latest
+    needs: compile
+    if: success()
+
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository }}:latest
+          IMAGE_NAME_LOWER=$(echo $IMAGE_NAME | tr '[:upper:]' '[:lower:]')
+          docker build -t $IMAGE_NAME_LOWER .
+
+      - name: Push Docker image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ ghcr.io/dinudannicolae/ci_cd_lab:latest }}:latest
+          IMAGE_NAME_LOWER=$(echo $IMAGE_NAME | tr '[:upper:]' '[:lower:]')
+          docker push $IMAGE_NAME_LOWER
